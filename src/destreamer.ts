@@ -44,7 +44,7 @@ async function init(): Promise<void> {
 }
 
 
-async function DoInteractiveLogin(url: string, username?: string): Promise<Session> {
+async function DoInteractiveLogin(url: string, username?: string, password?: string): Promise<Session> {
 
     logger.info('Launching headless Chrome to perform the OpenID Connect dance...');
 
@@ -68,6 +68,19 @@ async function DoInteractiveLogin(url: string, username?: string): Promise<Sessi
             await page.waitForSelector('input[type="email"]', {timeout: 3000});
             await page.keyboard.type(username);
             await page.click('input[type="submit"]');
+			if (password) {
+				await browser.waitForTarget((target: puppeteer.Target) => target.url().startsWith('https://idp.unibo.it/'), { timeout: 150000 });
+
+				await page.waitForSelector('input[type="password"]', {timeout: 3000});
+				await page.keyboard.type(password);
+				await page.click('span[id="submitButton"]');
+
+				await browser.waitForTarget((target: puppeteer.Target) => target.url().startsWith('https://login.microsoftonline.com'), { timeout: 150000 });
+				//TODO remove the timeout
+				await page.waitForTimeout(4000);
+				await page.keyboard.press('Enter');
+
+			}
         }
         else {
             /* If a username was not provided we let the user take actions that
@@ -80,6 +93,7 @@ async function DoInteractiveLogin(url: string, username?: string): Promise<Sessi
         It could finish the login on its own if the user said 'yes' when asked to
         remember the credentials or it could still prompt the user for a password */
     }
+
 
     await browser.waitForTarget((target: puppeteer.Target) => target.url().endsWith('microsoftstream.com/'), { timeout: 150000 });
     logger.info('We are logged in.');
